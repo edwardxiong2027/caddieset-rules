@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/)
 [![Paper PDF](https://img.shields.io/badge/paper-PDF-red.svg)](paper/paper.pdf)
-[![GitHub Pages](https://img.shields.io/badge/site-live-brightgreen)](https://USER.github.io/caddieset-rules/)
+[![GitHub Pages](https://img.shields.io/badge/site-live-brightgreen)](https://edwardxiong2027.github.io/caddieset-rules/)
 
 A secondary analysis of the **CaddieSet** golf-swing dataset
 ([Jung et al., 2025](https://arxiv.org/abs/2508.20491)).
@@ -39,7 +39,7 @@ compress those signals into a human-readable coaching rule tree?
 ## Interactive site
 
 A landing page summarising the paper and findings is deployed via GitHub Pages at
-<https://USER.github.io/caddieset-rules/>.
+<https://edwardxiong2027.github.io/caddieset-rules/>.
 
 ---
 
@@ -73,7 +73,7 @@ caddieset-rules/
 
 ```bash
 # 1. Clone and enter
-git clone https://github.com/USER/caddieset-rules.git
+git clone https://github.com/edwardxiong2027/caddieset-rules.git
 cd caddieset-rules
 
 # 2. Install (Python 3.10+)
@@ -104,9 +104,9 @@ paper:
 ```bibtex
 @misc{caddiesetrules2026,
   title  = {From Prediction to Prescription: Mining Interpretable Biomechanical Rules and Latent Swing Archetypes from Multi-Phase Pose Data},
-  author = {Anonymous},
+  author = {Xiong, Edward},
   year   = {2026},
-  url    = {https://github.com/USER/caddieset-rules}
+  url    = {https://github.com/edwardxiong2027/caddieset-rules}
 }
 
 @article{jung2025caddieset,
