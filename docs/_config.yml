@@ -1,0 +1,9 @@
+# Jekyll config for the GitHub Pages site.
+# The site is also fully functional as static HTML (index.html) even without Jekyll —
+# this config just sets sensible defaults if users enable the Jekyll theme.
+
+title: "CaddieSet Rules"
+description: "From Prediction to Prescription — mining interpretable biomechanical rules from golf swing data."
+theme: jekyll-theme-cayman
+markdown: kramdown
+highlighter: rouge

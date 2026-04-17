@@ -1,0 +1,441 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{microtype}
+\usepackage[margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{caption}
+\captionsetup{font=small,labelfont=bf,labelsep=period}
+\usepackage{subcaption}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue!60!black,citecolor=blue!50!black,urlcolor=blue!60!black}
+\usepackage[numbers,sort&compress]{natbib}
+\usepackage{authblk}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+
+\title{\textbf{From Prediction to Prescription:\\
+Mining Interpretable Biomechanical Rules and\\
+Latent Swing Archetypes from Multi-Phase Pose Data}\\[4pt]
+\large A Secondary Analysis of the CaddieSet Corpus}
+
+\author[1]{Anonymous Author}
+\affil[1]{Independent Research}
+\date{April 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+Recent work on the \emph{CaddieSet} corpus~\cite{jung2025caddieset} showed that joint-pose features extracted from
+single-camera golf-swing videos can be combined with ball-flight metrics to \emph{predict} shot outcomes with
+interpretable models. We take a complementary step: instead of predicting ball trajectories, we ask which
+body-posture features at which swing phases are most strongly associated with long versus short drives, and whether
+the population of 1{,}757 recorded swings (from eight golfers) decomposes into a small number of interpretable swing
+\emph{styles}. Using effect-size ranking (Cohen's $d$) across top-20\% vs.\ bottom-20\% outcome quantiles, we find a
+sparse set of pose features with very large effects ($d>1.0$) that are stable across both camera views. Random-Forest
+surrogates trained on pose alone reach $\text{CV}\,R^2=0.50$ for driver distance but only $0.19$--$0.33$ for
+directional accuracy, indicating that pose explains \emph{power} much better than \emph{accuracy}. A shallow
+decision-tree surrogate ($R^2=0.34$, depth$=3$) produces a seven-leaf coaching-rule tree with distance estimates that
+range from 145 to 227 yards depending on three posture decisions. Finally, unsupervised clustering in the Face-On
+pose space reveals four stable swing archetypes (silhouette $=0.54$) with distinct performance profiles.
+Our contributions extend \cite{jung2025caddieset} by (i) shifting from prediction to prescription, (ii) providing a
+phase-$\times$-outcome effect-size map, (iii) separating power and accuracy ceilings in the same corpus, and
+(iv) introducing a reproducible pipeline and code release.\footnote{Code and figures:
+\url{https://github.com/<USER>/caddieset-rules}.}
+\end{abstract}
+
+\vspace{1em}
+\begin{center}
+\begin{tcolorbox}[colback=gray!5,colframe=gray!40,width=0.96\linewidth]
+\small
+\textbf{Keywords:} golf biomechanics, human pose estimation, interpretable machine learning, sports analytics, effect-size analysis, unsupervised clustering
+\end{tcolorbox}
+\end{center}
+
+\section{Introduction}
+
+Golf is a sport in which a small number of biomechanical decisions--- made in roughly one second of body motion ---
+determine an outcome that rolls out over hundreds of yards. Building quantitative links from swing kinematics to
+ball flight has therefore been a long-standing research goal
+\cite{hume2005biomechanics,chu2010kinematic,meister2011rotational,macdougall2021putting}. Progress has historically
+been limited by two bottlenecks: (a) access to paired pose/outcome data, and (b) interpretability --- coaches can
+only act on insights that are expressible in a handful of human-readable rules \cite{rudin2019stop,doshivelez2017interpretability}.
+
+The recent \emph{CaddieSet} dataset~\cite{jung2025caddieset} addresses (a) by releasing 1{,}757 swings with both
+phase-segmented joint features and launch-monitor ball metrics. The dataset paper benchmarks several predictors for
+trajectory variables and shows that interpretable models are consistent with expert golf knowledge. What the paper
+does \emph{not} address is equally interesting: which pose features, at which phases, matter most; whether the
+population decomposes into distinct swing styles; and how much of direction accuracy (versus distance) is in principle
+recoverable from pose alone.
+
+In this paper we revisit CaddieSet with a \emph{prescriptive} lens. Our guiding questions are:
+\begin{description}
+    \item[Q1 --- Prescriptive ranking.] For each swing phase $p\in\{0,\dots,7\}$, each camera view
+          (Face-On, Down-the-Line), and each outcome (distance, ball speed, direction accuracy, side-spin), which body-posture features separate long/accurate shots from short/errant ones with the \emph{largest effect sizes}?
+    \item[Q2 --- Power vs.\ accuracy decoupling.] How do the predictive ceilings of pose-only models differ across
+          outcomes? Is the same information enough for both power and accuracy?
+    \item[Q3 --- Archetype discovery.] Do swings cluster into a small number of biomechanical styles, and if so, how
+          do these archetypes compare on outcome metrics?
+    \item[Q4 --- Rule extraction.] Can we compress the top-ranked signals into a shallow, human-readable decision
+          tree that a coach could deploy?
+\end{description}
+
+Figure~\ref{fig:pipeline} summarises the pipeline. Our contributions are:
+\begin{enumerate}
+    \item A \emph{phase-$\times$-outcome effect-size map} (Fig.~\ref{fig:heatmap}) that localises biomechanically
+          informative signals in both time (swing phase) and viewpoint.
+    \item Quantification of a \emph{power--accuracy gap}: pose-only models reach $R^2\approx 0.5$ for distance but
+          $0.19$--$0.33$ for directional accuracy, indicating that pose is necessary but insufficient for predicting
+          misses (Fig.~\ref{fig:ceiling}).
+    \item Discovery of \emph{four latent swing archetypes} with distinct performance fingerprints
+          (Fig.~\ref{fig:archetypes}).
+    \item A \emph{seven-leaf coaching rule tree} (Fig.~\ref{fig:tree}) with a cross-validated $R^2=0.34$ using three
+          pose features spanning phases 1, 2, 4 and 5.
+\end{enumerate}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.98\linewidth]{figures/fig1_pipeline.pdf}
+\caption{Analysis pipeline. Inputs (blue) are inherited from \cite{jung2025caddieset}; novel analytical stages
+         (yellow/red/green) are contributed by this paper.}
+\label{fig:pipeline}
+\end{figure}
+
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{Golf biomechanics and performance.}
+Classical studies using marker-based motion capture established a canonical view of the swing as a kinetic chain in which a delayed pelvis--thorax separation (the ``X-factor'') \cite{cheetham2001xfactor} is built during the backswing and released through the downswing \cite{nesbit2005sixdof,meister2011rotational}. Quantitative reviews \cite{hume2005biomechanics} conclude that both \emph{distance} and \emph{accuracy} emerge from the same kinetic chain, but through different mechanisms: distance is dominated by clubhead speed (driven by upper--lower body separation), while accuracy depends more on impact-phase club geometry. \citet{chu2010kinematic} report that 4--6 biomechanical variables explain $\sim$56\% of driving performance variance in low-handicap golfers, a figure consistent with our $R^2=0.50$ in Section~\ref{sec:ceiling}. \citet{langdown2012footpressure} links stance width to ground-reaction-force patterns that gate distance output.
+
+\paragraph{Pose estimation for sport.}
+General-purpose human-pose models \cite{cao2019openpose,sun2019hrnet,xu2022vitpose} have made it practical to extract
+joint-level features from single-camera sports video. The \emph{GolfDB} benchmark~\cite{mcnally2019golfdb} introduced
+swing-sequencing as a fine-grained video task, and \cite{liao2022maniflow} extended the phase-segmentation problem.
+CaddieSet~\cite{jung2025caddieset} is (to our knowledge) the first public corpus pairing phase-segmented joint
+features with launch-monitor ball data.
+
+\paragraph{Interpretable ML in sport.}
+Random Forests \cite{breiman2001randomforest} are widely used for sport prediction, but shallow trees and
+rule lists are preferred when the downstream consumer is a human coach \cite{rudin2019stop}. Effect-size
+comparisons \cite{cohen1988statistical} are a standard tool for translating statistical patterns into
+training cues. Our methodology uses each of these tools in its native role: Random Forests to estimate the
+\emph{ceiling} of what can be learned from pose, effect sizes to rank which phases and features warrant
+coaching attention, and a depth-3 tree to compress the finding into a human-usable rule.
+
+\paragraph{Positioning.}
+The closest prior work is the CaddieSet paper itself \cite{jung2025caddieset}, which focuses on predictive
+benchmarking of 15 expert-defined summary metrics. We are complementary: we use \emph{all} 68 per-phase pose features
+directly and shift the research question from \emph{``how well can we predict ball flight''} to
+\emph{``what should a golfer change.''}
+
+\section{Dataset and Features}
+\label{sec:data}
+
+We use CaddieSet~\cite{jung2025caddieset} without modification. It contains $N=1{,}757$ swings from 8 golfers, split
+across two camera views (Face-On $n=924$, Down-the-Line $n=833$) and 8 clubs, with the driver (W1) dominating
+($n=1{,}137$, 65\%). Each swing is labelled with five ball-flight outcomes (Distance, Carry, DirectionAngle, SpinBack,
+SpinSide, BallSpeed) and 68 body-posture features indexed by a phase prefix $\{0,\dots,7\}$ corresponding to Address,
+Takeaway, Mid-backswing, Top-of-backswing, Early-downswing, Pre-impact, Impact, and Finish. Roughly half of the
+features are populated only in one camera view; we therefore run all analyses \emph{per-view} to avoid imputation
+bias. Summary statistics by club are reproduced in Table~\ref{tab:clubs}.
+
+\begin{table}[t]
+\centering
+\small
+\caption{Ball-flight summaries per club (dataset means).}
+\label{tab:clubs}
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Club} & \textbf{Distance (yd)} & \textbf{Carry (yd)} & \textbf{Ball Speed (m/s)} & \textbf{Back Spin (rpm)} \\
+\midrule
+W1 (Driver)  & 189.5 & 171.1 & 56.3 & 2\,269 \\
+W3 (3-Wood)  & 196.6 & 177.6 & 58.2 & 2\,508 \\
+I4           & 167.3 & 151.5 & 51.5 & 3\,242 \\
+I5           & 160.1 & 144.1 & 49.6 & 3\,123 \\
+I6           & 149.8 & 137.0 & 48.7 & 4\,103 \\
+I7           & 137.2 & 125.7 & 45.8 & 4\,562 \\
+I8           & 133.4 & 123.5 & 45.6 & 5\,303 \\
+I9           & 128.2 & 118.0 & 44.3 & 5\,133 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Methodology}
+\label{sec:method}
+
+\subsection{Effect-size ranking}
+For each (view, outcome, feature), we split swings into top-20\% and bottom-20\% outcome groups and compute Cohen's
+$d = (\bar{x}_\text{top}-\bar{x}_\text{bot})/s_\text{pooled}$ \cite{cohen1988statistical}. Absolute-valued targets are
+used for direction error ($|\text{DirectionAngle}|$) and side spin ($|\text{SpinSide}|$) so that magnitude, not side,
+is ranked. We report per-phase maxima in Section~\ref{sec:phase-map} and per-feature sorted tables in the appendix.
+
+\subsection{Predictive ceilings}
+To estimate the ceiling of what \emph{pose alone} can explain per outcome, we fit Random-Forest regressors
+\cite{breiman2001randomforest} (300 trees, \texttt{min\_samples\_leaf}$=5$) on all well-populated
+features in a given view, and report 5-fold cross-validated $R^2$. Missing values are median-imputed after
+$[0.1\%,99.9\%]$ winsorisation.
+
+\subsection{Unsupervised archetype discovery}
+For the Face-On $\times$ driver (W1) subset ($n=613$), we (i) winsorise each feature at the $[1\%,99\%]$ percentiles
+to prevent outlier-dominated clusters, (ii) scale with robust z-scores, (iii) embed with UMAP \cite{mcinnes2018umap}
+($\texttt{n\_neighbors}=20, \texttt{min\_dist}=0.1$), and (iv) cluster the raw standardised features
+(\emph{not} the UMAP embedding) with $K$-means for $K\in\{3,4,5,6\}$, selecting $K=4$ by silhouette and
+interpretability.
+
+\subsection{Rule extraction}
+We fit a shallow regression tree ($\texttt{max\_depth}=3$, $\texttt{min\_samples\_leaf}=30$) on the same
+Face-On $\times$ W1 subset, predicting Distance. The tree is a human-readable surrogate: its cross-validated $R^2$
+quantifies how much predictive power survives the compression.
+
+\subsection{Implementation}
+All analyses use Python 3.10, \texttt{scikit-learn}~0.24+ \cite{pedregosa2011scikit}, \texttt{umap-learn}, and
+\texttt{matplotlib}. Seeds are fixed (42) throughout. Code is released with this paper.
+
+\section{Results}
+
+\subsection{Phase-$\times$-outcome effect-size map}
+\label{sec:phase-map}
+
+Figure~\ref{fig:heatmap} plots the \emph{maximum} $|d|$ across features per (phase, outcome, view) cell, for driver
+swings. Three regularities are visible:
+
+\begin{enumerate}
+    \item \textbf{Power signals are concentrated late in the backswing and early in the downswing.} In the Face-On
+          view the largest effects for Distance and Ball Speed occur at phases 2 (Mid-backswing, $d=1.19/1.15$) and 4
+          (Early-downswing, $d=1.36/1.64$). In the Down-the-Line view the peak shifts to phases 0 (Address, $d=1.30$)
+          and 3 (Top of backswing, $d=1.54/1.65$).
+    \item \textbf{Accuracy signals are dispersed.} Max $|d|$ for direction error never exceeds $0.81$ in either view,
+          and the strongest single cell for side-spin ($d=1.34$ at phase 7 Face-On) is roughly half the magnitude of
+          the strongest power cell.
+    \item \textbf{The two camera views are complementary, not redundant.} Face-On localises distance signals at
+          phases 4--5 (downswing); DTL localises them at phases 0--3 (setup and backswing). A two-camera setup is
+          likely to be strictly more informative than either alone.
+\end{enumerate}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.99\linewidth]{figures/fig2_heatmap.pdf}
+\caption{Phase-$\times$-outcome effect-size map for driver swings. Each cell is the maximum $|d|$ across all
+         features in that phase. Darker = more discriminating.}
+\label{fig:heatmap}
+\end{figure}
+
+\subsection{Power--accuracy ceiling gap}
+\label{sec:ceiling}
+
+Figure~\ref{fig:ceiling} shows 5-fold CV $R^2$ for the four outcomes in both views. Pose-only models recover
+$\approx$50\% of variance for distance and 55--56\% for ball speed. For accuracy outcomes the ceiling is markedly
+lower: $R^2=0.19$--$0.33$ for $|$direction error$|$ and $0.12$--$0.20$ for $|$side spin$|$. This is consistent with
+the biomechanical intuition that distance is dominated by large-amplitude body motions (coil, weight shift, lead-arm
+extension), whereas accuracy depends on millimetre-scale impact geometry (face angle, swing path at impact) that pose
+features only indirectly capture.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.78\linewidth]{figures/fig5_ceiling.pdf}
+\caption{Predictive ceiling of pose-only Random Forests per (view, outcome). A gap of 2--3$\times$ separates the
+         power from accuracy outcomes.}
+\label{fig:ceiling}
+\end{figure}
+
+\subsection{Four latent swing archetypes}
+\label{sec:archetypes}
+
+$K$-means with $K=4$ on the Face-On feature space produces clusters with silhouette $0.54$ and the following
+interpretations (details in Fig.~\ref{fig:archetypes}):
+
+\begin{itemize}
+    \item \textbf{A0 --- Early Hip Release} ($n=33$, distance $\approx156$ yd). High mid-backswing hip rotation
+          ($+3.6\sigma$) combined with reduced hip shift through impact ($-1.2\sigma$). Corresponds to the classical
+          ``spin-out'' fault.
+    \item \textbf{A1 --- Balanced Coil} ($n=512$, distance $\approx191$ yd). Population mean; mildly positive
+          lead-arm angle and shoulder position at mid-backswing. Contains the bulk of long-hitter swings.
+    \item \textbf{A2 --- Aggressive Rotator} ($n=32$, distance $\approx183$ yd). Very high \emph{early-downswing}
+          hip rotation ($+4.2\sigma$) but controlled upper body. Lowest direction error of any archetype
+          ($|\Delta|=3.4^{\circ}$).
+    \item \textbf{A3 --- Compact Swing} ($n=36$, distance $\approx167$ yd). Large negative shoulder-location and
+          lead-arm angle ($\leq-2\sigma$) signal a short, closed swing arc. Highest side-spin (1\,276 rpm abs),
+          indicating accuracy cost.
+\end{itemize}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.99\linewidth]{figures/fig3_archetypes.pdf}
+\caption{(a) UMAP embedding coloured by $K=4$ $K$-means labels. (b) Per-archetype performance profile
+         (min-max normalised across archetypes). A0 is uniformly dominated on power; A2 dominates on accuracy despite
+         sub-maximal distance.}
+\label{fig:archetypes}
+\end{figure}
+
+\subsection{A seven-leaf coaching rule tree}
+\label{sec:rules}
+
+Figure~\ref{fig:tree} shows a depth-3 regression tree ($R^2_{CV}=0.34$) using only three pose features: mid-backswing
+lead-arm angle (\texttt{2-LEFT-ARM-ANGLE}), hip shift at the takeaway (\texttt{1-HIP-SHIFTED}), and
+early-downswing hip shift (\texttt{4-HIP-SHIFTED}). A reader-friendly version of the rule list:
+
+\begin{tcolorbox}[colback=blue!3,colframe=blue!50!black,title={Prescription ruleset (driver, Face-On)}]
+\small
+\texttt{IF 2-LEFT-ARM-ANGLE > 160.9} \quad\textit{(i.e.\ keep lead arm within 19$^{\circ}$ of straight at mid-BS)} \\
+\quad\texttt{AND 1-HIP-SHIFTED > -0.52} \quad\textit{(hips not stuck behind ball at takeaway)} \\
+\quad\texttt{AND 4-HIP-SHIFTED > -0.15} \quad\textit{(hips shift toward target in early downswing)} \\
+$\Rightarrow$ \textbf{predicted drive $\approx$201 yd} (vs.\ 145 yd for the worst-case leaf). \\[2pt]
+
+The best leaf (227 yd) additionally requires that the trail-arm angle pre-impact (\texttt{5-RIGHT-ARM-ANGLE}) be
+$\leq 153.5^{\circ}$ --- i.e.\ the trail arm is still bent, indicating lag is preserved into the downswing.
+\end{tcolorbox}
+
+These rules match textbook coaching language while being both data-driven and reproducible. The distribution plots
+in Figure~\ref{fig:distributions} show that for each rule feature, the top-20\% and bottom-20\% distance groups are
+cleanly separated in modes, not just means.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.88\linewidth]{figures/fig4_tree.pdf}
+\caption{Depth-3 regression tree surrogate for driver distance (Face-On view). Each leaf's label is the predicted
+         distance in yards; proportions report the share of training examples that reach each leaf.}
+\label{fig:tree}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.99\linewidth]{figures/fig6_distributions.pdf}
+\caption{Distributional shifts between long (top 20\%) and short (bottom 20\%) drives across the six most-discriminating
+         pose features. Dashed lines mark group medians; $d$ = Cohen's $d$.}
+\label{fig:distributions}
+\end{figure}
+
+\section{Discussion}
+
+\paragraph{Why $R^2$ for accuracy is so much lower.}
+The $\sim\!2\times$ gap between power and accuracy ceilings (Fig.~\ref{fig:ceiling}) is a substantive finding, not
+just a numerical one. Accuracy on a driver is essentially determined by club-face angle and swing path at impact ---
+variables that the current CaddieSet features only indirectly capture. Adding clubhead-plane or face-angle signals
+(e.g.\ via a secondary high-speed camera at impact) would likely close much of the gap; without them, pose alone
+should be used for \emph{distance} coaching and only as a weak accuracy signal.
+
+\paragraph{From effect sizes to coaching language.}
+Across both views, three phase-aware themes dominate the biomechanics of long drives: (i) lead-arm extension through
+mid-backswing, (ii) hip lateral shift toward the target in the early downswing, and (iii) preserved trail-leg flex
+through the top of the backswing. The depth-3 tree in Section~\ref{sec:rules} operationalises themes (i) and (ii)
+directly. Theme (iii) appears as the dominant DTL signal in Fig.~\ref{fig:heatmap} at phase 3 ($d=-1.40$).
+
+\paragraph{Archetypes as coaching groups.}
+The four archetypes in Section~\ref{sec:archetypes} are not just clustering artefacts: A0 and A3 appear to describe
+distinct faults (early hip rotation and a collapsed arm arc) while A2 is notable as an \emph{efficient} style --- not
+the longest, but consistently on-line. A practical use is matching a new golfer's swing to the nearest archetype and
+using archetype-specific rules.
+
+\paragraph{Comparison with the original CaddieSet paper.}
+\citet{jung2025caddieset} benchmark 15 expert-defined metrics and establish that interpretable predictors are
+consistent with domain knowledge. Our work is complementary and does not reproduce their pipeline: we use all 68
+raw per-phase features directly; we rank features by effect size rather than feature importance; and we produce a
+decision tree whose leaves are coaching prescriptions rather than trajectory predictions.
+
+\section{Limitations and Threats to Validity}
+
+\begin{itemize}
+    \item \textbf{Small golfer pool.} $N_\text{golfer}=8$. Archetypes are partly golfer-specific (A3 is 89\% Golfer 4;
+          A0 is 82\% Golfer 8). Replication on a larger corpus is essential before drawing population-level claims.
+    \item \textbf{Observational data.} All associations are correlational. A straighter lead arm
+          \emph{could} be a cause of distance, or merely a marker of a golfer who already has the coil to support it.
+          Interventional studies are needed to establish causal coaching value.
+    \item \textbf{Feature-name inference.} The public dataset column names include directional descriptors
+          (e.g.\ \texttt{HIP-SHIFTED}, \texttt{HANGING-BACK}) but not formal units; sign interpretation follows the
+          most natural biomechanical reading.
+    \item \textbf{No club-face or path data.} As noted above, the accuracy ceiling is capped by features the
+          dataset does not include.
+    \item \textbf{Single-view models in practice.} Real deployments will typically record only Face-On or DTL.
+          Our cross-view complementarity result implies that either view alone leaves meaningful signal on the table.
+\end{itemize}
+
+\section{Reproducibility}
+
+The code, figure-generation scripts and this manuscript source are released under an MIT licence at the GitHub
+repository cited on the title page. The underlying data remain the property of the authors of
+\citet{jung2025caddieset} and are used here under their terms. Seed values, hyperparameters, and cross-validation
+folds are fixed throughout; rerunning \texttt{src/05\_make\_figures.py} from a clean environment reproduces every
+figure in this paper exactly.
+
+\section{Conclusion}
+
+The CaddieSet corpus \cite{jung2025caddieset} is a rich substrate for biomechanical analysis well beyond trajectory
+prediction. By (i) shifting the question from ``predict the ball'' to ``prescribe the swing'', (ii) reporting
+per-phase effect sizes, and (iii) compressing the findings into a human-readable rule tree and a four-archetype
+clustering, we show that a small number of pose features drive most of the distance gap between long and short
+drives --- and that the same features are \emph{not} sufficient for predicting accuracy, motivating future sensor
+integration. We hope this secondary analysis encourages further prescriptive, interpretable use of the CaddieSet
+data.
+
+\section*{Acknowledgements}
+We thank the authors of \cite{jung2025caddieset} for releasing the CaddieSet corpus, and the developers of
+\texttt{scikit-learn}, \texttt{umap-learn}, and \texttt{matplotlib} for the open-source tooling that makes this
+kind of secondary analysis practical.
+
+\bibliographystyle{plainnat}
+\bibliography{references}
+
+\appendix
+\section{Top feature tables}
+\label{app:tables}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Top-12 pose features ranked by $|\text{Cohen's }d|$ between the top-20\% and bottom-20\% driver-distance groups,
+         Face-On view ($n_\text{top}=n_\text{bot}=123$; all $p<10^{-5}$).}
+\label{tab:top-faceon}
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Feature} & \textbf{Top mean} & \textbf{Bot mean} & \textbf{Diff} & $\mathbf{d}$ \\
+\midrule
+4-HIP-SHIFTED        & $+0.018$ & $-0.245$ & $+0.263$ & $+1.36$ \\
+2-LEFT-ARM-ANGLE     & $167.9^{\circ}$ & $139.2^{\circ}$ & $+28.7^{\circ}$ & $+1.19$ \\
+5-HIP-SHIFTED        & $+0.407$ & $+0.155$ & $+0.252$ & $+1.13$ \\
+7-FINISH-ANGLE       & $83.3^{\circ}$ & $78.0^{\circ}$ & $+5.3^{\circ}$ & $+0.71$ \\
+6-RIGHT-LEG-ANGLE    & $159.0^{\circ}$ & $164.4^{\circ}$ & $-5.4^{\circ}$ & $-0.67$ \\
+1-LEFT-ARM-ANGLE     & $169.1^{\circ}$ & $158.5^{\circ}$ & $+10.6^{\circ}$ & $+0.64$ \\
+2-HIP-ROTATION       & $10.6^{\circ}$ & $43.3^{\circ}$ & $-32.7^{\circ}$ & $-0.64$ \\
+3-HIP-SHIFTED        & $-0.447$ & $-0.599$ & $+0.152$ & $+0.64$ \\
+2-SHOULDER-LOC       & $58.1$ & $34.9$ & $+23.2$ & $+0.63$ \\
+3-RIGHT-LEG-ANGLE    & $167.3^{\circ}$ & $173.7^{\circ}$ & $-6.4^{\circ}$ & $-0.61$ \\
+6-LEFT-ARM-ANGLE     & $161.1^{\circ}$ & $140.8^{\circ}$ & $+20.4^{\circ}$ & $+0.61$ \\
+6-HIP-SHIFTED        & $+0.459$ & $+0.254$ & $+0.205$ & $+0.54$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\caption{Top-12 pose features, Down-the-Line view ($n_\text{top}=108$, $n_\text{bot}=105$).}
+\label{tab:top-dtl}
+\begin{tabular}{lrrrr}
+\toprule
+\textbf{Feature} & \textbf{Top mean} & \textbf{Bot mean} & \textbf{Diff} & $\mathbf{d}$ \\
+\midrule
+3-RIGHT-DISTANCE    & $0.670$ & $0.582$ & $+0.088$ & $+1.54$ \\
+3-RIGHT-LEG-ANGLE   & $167.2^{\circ}$ & $177.6^{\circ}$ & $-10.4^{\circ}$ & $-1.40$ \\
+0-SPINE-ANGLE       & $73.2^{\circ}$ & $77.9^{\circ}$ & $-4.7^{\circ}$ & $-1.11$ \\
+3-RIGHT-ARM-ANGLE   & $75.8^{\circ}$ & $64.1^{\circ}$ & $+11.7^{\circ}$ & $+0.90$ \\
+1-SPINE-ANGLE       & $75.8^{\circ}$ & $78.4^{\circ}$ & $-2.6^{\circ}$ & $-0.81$ \\
+4-HIP-ANGLE         & $6.5^{\circ}$ & $11.2^{\circ}$ & $-4.7^{\circ}$ & $-0.76$ \\
+5-LEFT-LEG-ANGLE    & $175.1^{\circ}$ & $169.6^{\circ}$ & $+5.6^{\circ}$ & $+0.74$ \\
+6-HIP-ANGLE         & $12.5^{\circ}$ & $18.0^{\circ}$ & $-5.5^{\circ}$ & $-0.73$ \\
+7-SHOULDER-ANGLE    & $7.3^{\circ}$ & $12.9^{\circ}$ & $-5.6^{\circ}$ & $-0.69$ \\
+3-HIP-ANGLE         & $6.9^{\circ}$ & $9.7^{\circ}$ & $-2.8^{\circ}$ & $-0.63$ \\
+6-SPINE-ANGLE       & $80.6^{\circ}$ & $77.0^{\circ}$ & $+3.7^{\circ}$ & $+0.61$ \\
+2-SHOULDER-ANGLE    & $18.9^{\circ}$ & $21.1^{\circ}$ & $-2.2^{\circ}$ & $-0.40$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\end{document}
