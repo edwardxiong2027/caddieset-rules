@@ -14,6 +14,12 @@ data/*.csv
 data/*.parquet
 data/*.pkl
 
+# Per-swing artefacts derived from CaddieSet (re-creatable from pipeline)
+# Summary artefacts (small tables) ARE committed.
+artifacts/clean.csv
+artifacts/tree.pkl
+artifacts/archetypes.csv
+
 # LaTeX build artefacts
 paper/*.aux
 paper/*.log

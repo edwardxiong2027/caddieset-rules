@@ -1,0 +1,70 @@
+{
+  "r2_kfold": 0.33823478375098254,
+  "r2_groupkfold": -3.3615590697124986,
+  "depth_sweep": [
+    {
+      "depth": 2,
+      "r2_kfold": 0.29859976266776345,
+      "r2_groupkfold": -3.4698825375816726
+    },
+    {
+      "depth": 3,
+      "r2_kfold": 0.33823478375098254,
+      "r2_groupkfold": -3.3615590697124986
+    },
+    {
+      "depth": 4,
+      "r2_kfold": 0.31730184927755967,
+      "r2_groupkfold": -3.543711780190435
+    },
+    {
+      "depth": 5,
+      "r2_kfold": 0.3149425414472571,
+      "r2_groupkfold": -3.6078945462140437
+    }
+  ],
+  "n_total": 613,
+  "n_leaves": 7,
+  "features": [
+    "0-SHOULDER-ANGLE",
+    "0-STANCE-RATIO",
+    "0-UPPER-TILT",
+    "1-HEAD-LOC",
+    "1-HIP-ROTATION",
+    "1-HIP-SHIFTED",
+    "1-LEFT-ARM-ANGLE",
+    "1-RIGHT-ARM-ANGLE",
+    "1-SHOULDER-LOC",
+    "2-HEAD-LOC",
+    "2-HIP-ROTATION",
+    "2-HIP-SHIFTED",
+    "2-LEFT-ARM-ANGLE",
+    "2-SHOULDER-LOC",
+    "2-UPPER-TILT",
+    "3-HEAD-LOC",
+    "3-HIP-ROTATION",
+    "3-HIP-SHIFTED",
+    "3-RIGHT-LEG-ANGLE",
+    "3-SHOULDER-LOC",
+    "4-HEAD-LOC",
+    "4-HIP-HANGING-BACK",
+    "4-HIP-ROTATION",
+    "4-HIP-SHIFTED",
+    "4-RIGHT-ARMPIT-ANGLE",
+    "4-SHOULDER-HANGING-BACK",
+    "5-HEAD-LOC",
+    "5-HIP-HANGING-BACK",
+    "5-HIP-SHIFTED",
+    "5-LEFT-ARM-ANGLE",
+    "5-RIGHT-ARM-ANGLE",
+    "5-SHOULDER-ANGLE",
+    "5-SHOULDER-HANGING-BACK",
+    "6-HEAD-LOC",
+    "6-HIP-SHIFTED",
+    "6-LEFT-ARM-ANGLE",
+    "6-RIGHT-LEG-ANGLE",
+    "6-WEIGHT-SHIFT",
+    "7-FINISH-ANGLE",
+    "7-HIP-SHIFTED"
+  ]
+}

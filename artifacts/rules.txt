@@ -1,0 +1,19 @@
+|--- 2-LEFT-ARM-ANGLE <= 160.93
+|   |--- 2-HIP-ROTATION <= 168.72
+|   |   |--- 3-HIP-SHIFTED <= -0.52
+|   |   |   |--- value: [169.77]
+|   |   |--- 3-HIP-SHIFTED >  -0.52
+|   |   |   |--- value: [188.62]
+|   |--- 2-HIP-ROTATION >  168.72
+|   |   |--- value: [144.60]
+|--- 2-LEFT-ARM-ANGLE >  160.93
+|   |--- 1-HIP-SHIFTED <= -0.52
+|   |   |--- 5-RIGHT-ARM-ANGLE <= 153.51
+|   |   |   |--- value: [227.26]
+|   |   |--- 5-RIGHT-ARM-ANGLE >  153.51
+|   |   |   |--- value: [214.25]
+|   |--- 1-HIP-SHIFTED >  -0.52
+|   |   |--- 4-HIP-SHIFTED <= -0.15
+|   |   |   |--- value: [175.42]
+|   |   |--- 4-HIP-SHIFTED >  -0.15
+|   |   |   |--- value: [201.07]

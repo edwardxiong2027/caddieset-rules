@@ -1,0 +1,11 @@
+{
+  "seed": 42,
+  "n_tests": 252,
+  "n_fdr_significant_05": 98,
+  "extreme_groups_quantiles": [
+    0.2,
+    0.8
+  ],
+  "note_on_inflation": "Extreme-groups Cohen's d is systematically larger than the underlying continuous standardised effect. The column `r_cont_est` back-transforms the point-biserial r to an approximate continuous Pearson r following Fitzsimons (2008).",
+  "n_fdr_significant_05_at_pearson_q05": 98
+}

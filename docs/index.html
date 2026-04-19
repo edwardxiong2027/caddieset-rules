@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CaddieSet Rules — From Prediction to Prescription</title>
-<meta name="description" content="A secondary analysis of the CaddieSet golf-swing dataset. Interpretable biomechanical rules and latent swing archetypes mined from multi-phase pose data.">
-<meta property="og:title" content="CaddieSet Rules — From Prediction to Prescription">
-<meta property="og:description" content="Interpretable biomechanical rules and latent swing archetypes mined from the CaddieSet golf swing dataset.">
+<title>CaddieSet Rules — Phase-localised pose correlates of driver distance (revised)</title>
+<meta name="description" content="Secondary analysis of the CaddieSet golf-swing dataset: phase-localised pose correlates of driver distance and the identity gap under golfer-aware CV.">
+<meta property="og:title" content="CaddieSet Rules — Phase-localised pose correlates of driver distance (revised)">
+<meta property="og:description" content="Secondary analysis of the CaddieSet golf-swing dataset with FDR-controlled effect sizes and golfer-aware cross-validation.">
 <meta property="og:type" content="website">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,23 +14,21 @@
 <style>
   :root{
     --fw:#0a7c3a; --fw2:#0d5b2c; --ink:#111; --muted:#555; --bg:#fbfaf5;
-    --card:#ffffff; --accent:#eaa94c; --accent2:#3a7ca5;
+    --card:#ffffff; --accent:#eaa94c; --accent2:#3a7ca5; --warn:#c63d2e;
   }
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{margin:0;font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;
        background:var(--bg);color:var(--ink);line-height:1.62;font-size:16px}
 
-  /* Header */
   header.hero{background:linear-gradient(135deg,var(--fw) 0%,var(--fw2) 100%);
               color:#fff;padding:56px 24px 48px;text-align:center;position:relative;overflow:hidden}
   header.hero::before{content:"";position:absolute;inset:0;
        background-image:radial-gradient(circle at 25% 20%, rgba(255,255,255,0.08) 0%, transparent 40%),
                         radial-gradient(circle at 80% 80%, rgba(255,255,255,0.06) 0%, transparent 40%);}
-  header.hero h1{margin:0 0 10px 0;font-size:38px;font-weight:700;
-                 font-family:'Source Serif 4',serif;letter-spacing:-0.3px;position:relative}
-  header.hero h1 .sep{opacity:.5;font-weight:400}
-  header.hero .tag{font-size:18px;opacity:.93;max-width:760px;margin:0 auto;position:relative}
+  header.hero h1{margin:0 0 10px 0;font-size:34px;font-weight:700;
+                 font-family:'Source Serif 4',serif;letter-spacing:-0.3px;position:relative;max-width:920px;margin-left:auto;margin-right:auto}
+  header.hero .tag{font-size:17px;opacity:.93;max-width:780px;margin:6px auto 0;position:relative}
   header.hero .meta{margin-top:18px;font-size:14px;opacity:.82;position:relative}
   header.hero .badges{margin-top:22px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap;position:relative}
   .badge{background:rgba(255,255,255,0.16);color:#fff;padding:8px 16px;border-radius:24px;
@@ -39,8 +37,8 @@
   .badge:hover{background:rgba(255,255,255,0.28);transform:translateY(-1px)}
   .badge.primary{background:var(--accent);color:#000;border-color:var(--accent)}
   .badge.primary:hover{background:#f2b866}
+  .revpill{display:inline-block;background:#fff;color:var(--fw2);padding:3px 10px;border-radius:14px;font-size:12px;font-weight:700;letter-spacing:0.4px;margin-top:10px}
 
-  /* Layout */
   .wrap{max-width:1100px;margin:0 auto;padding:0 24px}
   main{padding:32px 0 64px}
   section.card{background:var(--card);border-radius:14px;padding:32px 36px;
@@ -53,63 +51,58 @@
   a{color:var(--accent2);text-decoration:none;border-bottom:1px solid rgba(58,124,165,0.3)}
   a:hover{color:var(--fw);border-bottom-color:var(--fw)}
 
-  /* Key-finding card grid */
   .findings{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin:18px 0}
   .finding{background:#f3f8f0;border-left:4px solid var(--fw);padding:14px 18px;border-radius:0 10px 10px 0}
   .finding .d{display:inline-block;background:var(--fw);color:#fff;padding:2px 10px;
               border-radius:12px;font-size:12px;font-weight:600;margin-bottom:6px}
+  .finding.warn{background:#fbf2ef;border-left-color:var(--warn)}
+  .finding.warn .d{background:var(--warn)}
   .finding h4{margin:0 0 4px 0;font-size:15px;font-weight:600}
   .finding p{margin:0;font-size:14px;color:var(--muted)}
 
-  /* Inline stats row */
   .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:18px 0 8px}
   .stat{background:#f7f9f4;padding:14px 12px;border-radius:10px;text-align:center;border:1px solid #eaeee2}
-  .stat .n{font-size:26px;font-weight:700;color:var(--fw2);font-family:'Source Serif 4',serif}
+  .stat .n{font-size:23px;font-weight:700;color:var(--fw2);font-family:'Source Serif 4',serif}
   .stat .l{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:0.7px;margin-top:2px}
 
-  /* Figure cards */
+  .callout{background:#fff8e9;border:1px solid #e8cb7a;border-radius:10px;padding:14px 18px;margin:14px 0;font-size:14.5px}
+  .callout b{color:var(--warn)}
+
   figure{margin:18px 0;padding:0}
   figure img{width:100%;display:block;border-radius:10px;border:1px solid #eaeae2}
   figcaption{color:var(--muted);font-size:13.5px;margin-top:8px;font-style:italic;text-align:center}
 
-  /* Tables */
   table{width:100%;border-collapse:collapse;font-size:14px;margin:12px 0}
   th{background:#f0f4ec;color:var(--fw2);text-align:left;padding:10px 12px;font-weight:600;font-size:13px}
   td{padding:9px 12px;border-bottom:1px solid #eee}
   tr:hover td{background:#f9fcf6}
 
-  /* Code */
   code,pre{font-family:'JetBrains Mono',monospace;font-size:13px}
   pre{background:#282c34;color:#abb2bf;padding:16px 18px;border-radius:10px;overflow-x:auto;line-height:1.5}
   :not(pre)>code{background:#f4f4ee;color:#c7254e;padding:2px 6px;border-radius:4px;font-size:13px}
 
-  /* Rule box */
   .rulebox{background:#fff8e9;border:1px solid #e8cb7a;border-radius:10px;padding:18px 22px;margin:14px 0;
            font-family:'JetBrains Mono',monospace;font-size:13.5px;line-height:1.75}
   .rulebox .out{color:var(--fw2);font-weight:700}
   .rulebox .note{color:var(--muted);font-family:'Inter',sans-serif;font-style:italic;font-size:12.5px}
 
-  /* Archetype cards */
   .archs{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:14px 0}
   .arch{padding:14px;border-radius:10px;color:#fff;position:relative}
   .arch h4{margin:0 0 6px 0;font-size:14px;font-weight:700}
   .arch p{font-size:12.5px;margin:3px 0;opacity:0.94}
-  .arch .n{position:absolute;top:10px;right:12px;font-size:11px;opacity:0.8}
+  .arch .n{position:absolute;top:10px;right:12px;font-size:11px;opacity:0.9}
 
-  /* Footer */
   footer{background:#1a2e23;color:#d1dace;padding:32px 24px;font-size:14px;text-align:center}
   footer a{color:#8fd0a3;border-bottom-color:rgba(143,208,163,0.3)}
   footer a:hover{color:#fff;border-bottom-color:#fff}
 
-  /* Responsive */
   @media (max-width:820px){
-    header.hero h1{font-size:30px}
+    header.hero h1{font-size:26px}
     .findings,.archs{grid-template-columns:1fr}
     .stats{grid-template-columns:repeat(2,1fr)}
     section.card{padding:24px 22px}
   }
 
-  /* TOC */
   nav.toc{background:#fff;padding:16px 22px;border-radius:10px;margin-bottom:20px;
           box-shadow:0 1px 3px rgba(0,0,0,0.04);font-size:14px}
   nav.toc strong{color:var(--fw2)}
@@ -122,14 +115,15 @@
 <body>
 
 <header class="hero">
-  <h1>CaddieSet Rules</h1>
-  <div class="tag">From <b>prediction</b> to <b>prescription</b>: mining interpretable biomechanical rules and latent swing archetypes from multi-phase pose data.</div>
-  <div class="meta">by <b>Edward Xiong</b> &middot; A secondary analysis of the CaddieSet corpus (Jung et al., 2025)</div>
+  <h1>Phase-localised pose correlates of driver distance in a small-<i>N</i> golf corpus</h1>
+  <div class="tag">A secondary, associative analysis of the CaddieSet dataset — with FDR control, golfer-aware CV, and honest ceilings.</div>
+  <div class="meta">by <b>Edward Xiong</b> &middot; Secondary analysis of <a href="https://arxiv.org/abs/2508.20491" style="color:#fff">Jung et al. (2025)</a></div>
   <div class="badges">
-    <a class="badge primary" href="https://github.com/edwardxiong2027/caddieset-rules/blob/main/paper/paper.pdf">📄 Read the paper (PDF)</a>
-    <a class="badge" href="https://github.com/edwardxiong2027/caddieset-rules">⭐ GitHub repo</a>
+    <a class="badge primary" href="https://github.com/edwardxiong2027/caddieset-rules/blob/main/paper/paper.pdf">Read the paper (PDF)</a>
+    <a class="badge" href="https://github.com/edwardxiong2027/caddieset-rules">GitHub repo</a>
     <a class="badge" href="https://arxiv.org/abs/2508.20491">Original dataset paper</a>
   </div>
+  <div><span class="revpill">v2 · revised per peer review</span></div>
 </header>
 
 <main>
@@ -137,147 +131,188 @@
 
 <nav class="toc">
   <strong>Contents:</strong>
-  <a href="#findings">Key findings</a>
-  <a href="#pipeline">Pipeline</a>
-  <a href="#heatmap">Phase × outcome map</a>
-  <a href="#archetypes">Archetypes</a>
-  <a href="#rules">Rule tree</a>
+  <a href="#summary">Summary</a>
+  <a href="#identity">Identity gap</a>
+  <a href="#heatmap">Phase map</a>
+  <a href="#clusters">Clusters</a>
+  <a href="#rules">Rule surrogate</a>
+  <a href="#robust">Robustness</a>
   <a href="#reproduce">Reproduce</a>
   <a href="#cite">Cite</a>
 </nav>
 
-<section class="card">
-  <h2>TL;DR</h2>
-  <p>The CaddieSet corpus pairs pose features with ball-flight data for 1,757 golf swings from 8 golfers. The
-  dataset paper (<a href="https://arxiv.org/abs/2508.20491">Jung et al., 2025</a>) benchmarks predictive models for
-  trajectory outcomes. This project takes a complementary angle: we ask which body positions, at which swing
-  phases, separate long drives from short drives, and we compress those signals into a human-readable coaching
-  rule tree.</p>
+<section class="card" id="summary">
+  <h2>Summary</h2>
+  <p>The CaddieSet corpus pairs per-phase pose features with launch-monitor data for 1,757 swings from
+  <b>only 8 golfers</b>. This project is a secondary analysis that asks which body positions, at which swing
+  phases, are associated with driver distance and accuracy — and how much of any apparent predictive power
+  is real biomechanics versus memorised golfer identity.</p>
 
   <div class="stats">
     <div class="stat"><div class="n">1,757</div><div class="l">Swings</div></div>
     <div class="stat"><div class="n">8</div><div class="l">Golfers</div></div>
     <div class="stat"><div class="n">68</div><div class="l">Pose features</div></div>
-    <div class="stat"><div class="n">8</div><div class="l">Swing phases</div></div>
-    <div class="stat"><div class="n">83&nbsp;yd</div><div class="l">Top/bot gap</div></div>
+    <div class="stat"><div class="n">252</div><div class="l">FDR-controlled tests</div></div>
+    <div class="stat"><div class="n">98</div><div class="l">Survive q&lt;0.05</div></div>
   </div>
+
+  <div class="callout"><b>What changed in v2:</b> we replace random 5-fold CV with <b>GroupKFold(8)</b>
+  grouped by golfer, apply BH-FDR across all 252 tests, back-transform extreme-groups <i>d</i> to
+  continuous Pearson <i>r</i>, audit the four-cluster solution with a per-golfer crosstab and LOGO
+  stability, and retitle the paper to reflect an <i>associative</i> (not <i>prescriptive</i>) framing.
+  The headline predictive number changes substantially.</div>
 </section>
 
-<section class="card" id="findings">
-  <h2>Key findings at a glance</h2>
-  <div class="findings">
-    <div class="finding">
-      <div class="d">Cohen's d = +1.36</div>
-      <h4>Shift hips <em>toward</em> the target in early downswing</h4>
-      <p>Long hitters: +0.02 · Short hitters: -0.25. The #1 distance killer is hips stuck behind the ball on the way down.</p>
-    </div>
-    <div class="finding">
-      <div class="d">Cohen's d = +1.19</div>
-      <h4>Keep the lead arm straighter at mid-backswing</h4>
-      <p>Long hitters: 168° · Short hitters: 149°. Roughly 1-2 yards cost per degree of lead-elbow collapse.</p>
-    </div>
-    <div class="finding">
-      <div class="d">Cohen's d = -1.40</div>
-      <h4>Preserve trail-leg flex at the top of the backswing</h4>
-      <p>Long hitters keep the trail leg flexed (~166°); short hitters stand up nearly straight (~178°).</p>
-    </div>
-    <div class="finding">
-      <div class="d">Cohen's d = -0.64</div>
-      <h4>Quiet hips on the backswing — let the shoulders coil</h4>
-      <p>Long hitters rotate hips only ~11° in mid-backswing; short hitters open them to ~43°, dumping the coil.</p>
-    </div>
-  </div>
-  <p style="margin-top:14px;font-size:14px;color:var(--muted)">All effect sizes are statistically significant at <i>p</i> &lt; 10<sup>-6</sup> (Welch's t-test, top-20% vs bottom-20% drives, Face-On or DTL view as noted).</p>
-</section>
+<section class="card" id="identity">
+  <h2>1 · The identity gap is the main finding</h2>
+  <p>Under random 5-fold CV, pose-only Random Forests reach R² ≈ 0.50 for driver distance. Under
+  GroupKFold(8) grouped by golfer — where no golfer's swings appear in both train and test — the same
+  model collapses to a strongly negative R². Across all four outcomes, the identity gap dominates.</p>
 
-<section class="card" id="pipeline">
-  <h2>1 · Analysis pipeline</h2>
   <figure>
-    <img src="assets/fig1_pipeline.png" alt="Pipeline figure">
-    <figcaption>Figure 1. Inputs (blue) are from CaddieSet; analytical stages (yellow/red/green) are the contributions of this paper.</figcaption>
+    <img src="assets/fig5_ceiling.png" alt="Random vs GroupKFold ceilings">
+    <figcaption>Figure 1. R² per outcome under random 5-fold (blue) vs GroupKFold(8) grouped by golfer (red). The gap is the identity gap: how much of the apparent ceiling is memorising which golfer hit the shot.</figcaption>
   </figure>
+
+  <table>
+    <tr><th>Outcome</th><th>View</th><th>Random 5-fold R²</th><th>GroupKFold(8) R²</th></tr>
+    <tr><td>Distance</td><td>Face-On</td><td>+0.50</td><td><b style="color:var(--warn)">−4.36</b></td></tr>
+    <tr><td>Distance</td><td>DTL</td><td>+0.48</td><td><b style="color:var(--warn)">−3.72</b></td></tr>
+    <tr><td>Ball Speed</td><td>Face-On</td><td>+0.56</td><td><b style="color:var(--warn)">−4.67</b></td></tr>
+    <tr><td>|Direction error|</td><td>Face-On</td><td>+0.19</td><td>−0.49</td></tr>
+    <tr><td>|Side spin|</td><td>Face-On</td><td>+0.20</td><td>−0.37</td></tr>
+  </table>
+
+  <p><b>Reading:</b> at N = 8 golfers, pose-only models on CaddieSet are within-subject describers, not
+  cross-subject predictors. The corpus is still valuable — but its current scale supports associative,
+  not prescriptive, claims.</p>
 </section>
 
 <section class="card" id="heatmap">
-  <h2>2 · Phase × outcome effect-size map</h2>
-  <p>For each combination of swing phase (0-7), camera view, and outcome (distance, ball speed, direction error, side spin), we compute Cohen's <i>d</i> between the top-20% and bottom-20% swings. The heatmap below reports the <em>maximum</em> absolute <i>d</i> across features in each cell.</p>
+  <h2>2 · Phase × outcome map with FDR control</h2>
+  <p>For each (phase, view, outcome) tile, we plot the maximum extreme-groups |<i>d</i>| across the features in that tile. Cells with no feature surviving Benjamini–Hochberg FDR q &lt; 0.05 are hatched — don't read pure noise.</p>
+
   <figure>
-    <img src="assets/fig2_heatmap.png" alt="Phase × outcome heatmap">
-    <figcaption>Figure 2. Power outcomes concentrate at phases 2-5 (Face-On) and phases 0-3 (DTL). Accuracy outcomes are dispersed and weaker overall.</figcaption>
+    <img src="assets/fig2_heatmap.png" alt="FDR-controlled phase × outcome heatmap">
+    <figcaption>Figure 2. 98/252 tests survive BH-FDR q &lt; 0.05. Power signals concentrate in mid-backswing and early downswing. Accuracy signals are dispersed and mostly weaker.</figcaption>
   </figure>
-  <p><b>Two takeaways:</b> (i) the two camera views are complementary — Face-On captures the downswing; DTL captures setup and top-of-backswing; (ii) accuracy outcomes (bottom two rows) never match power outcomes in effect strength, foreshadowing the <i>power-accuracy gap</i> quantified below.</p>
+
+  <p><b>Inflation reminder:</b> extreme-groups <i>d</i> systematically overstates the continuous effect. The
+  biggest <i>d</i> in the map (|<i>d</i>| = 1.36 for early-downswing hip shift) back-transforms to a
+  continuous Pearson <i>r</i> of roughly <b>+0.45</b>, not a near-deterministic correlation.</p>
 </section>
 
 <section class="card">
-  <h2>3 · How much can pose alone explain?</h2>
-  <p>We train Random-Forest regressors on each view's pose features and report 5-fold cross-validated R² per outcome. Pose explains half the variance in driver distance — but only a fifth of directional accuracy.</p>
-  <figure>
-    <img src="assets/fig5_ceiling.png" alt="Predictive ceiling chart">
-    <figcaption>Figure 5. Predictive ceiling of pose-only Random Forests. Pose is necessary but insufficient for predicting accuracy outcomes.</figcaption>
-  </figure>
-  <p><b>Interpretation:</b> distance comes from large-amplitude body motions (coil, weight transfer, lead-arm extension) which pose captures. Accuracy comes from millimetre-scale club-face geometry at impact, which pose does not directly capture. A coach using video alone should focus on distance diagnostics; accuracy diagnosis really needs a launch monitor.</p>
+  <h2>3 · What still survives FDR and why</h2>
+  <div class="findings">
+    <div class="finding">
+      <div class="d">d = +1.36 · r ≈ +0.45</div>
+      <h4>Shift hips <em>toward</em> the target in early downswing</h4>
+      <p>Long hitters: +0.02 · Short hitters: −0.25. Survives FDR q &lt; 10<sup>−4</sup>.</p>
+    </div>
+    <div class="finding">
+      <div class="d">d = +1.19 · r ≈ +0.39</div>
+      <h4>Keep the lead arm straighter at mid-backswing</h4>
+      <p>Long hitters: 168° · Short hitters: 149°. Survives FDR q &lt; 10<sup>−4</sup>.</p>
+    </div>
+    <div class="finding">
+      <div class="d">d = −1.40 · r ≈ −0.46</div>
+      <h4>Preserve trail-leg flex at the top of the backswing (DTL)</h4>
+      <p>Long hitters keep the trail leg flexed (~166°); short hitters stand up nearly straight (~178°).</p>
+    </div>
+    <div class="finding warn">
+      <div class="d">d = −0.64 · r ≈ −0.19</div>
+      <h4>Quiet hips on the backswing — weaker than it looks</h4>
+      <p>Long hitters rotate hips ~11°; short hitters ~43°. Still FDR-significant, but the continuous <i>r</i> is modest.</p>
+    </div>
+  </div>
+  <p style="margin-top:14px;font-size:14px;color:var(--muted)">Signs follow the most natural biomechanical reading of the public CaddieSet column names (no formal data dictionary of units/conventions is published). Magnitudes do not depend on that choice.</p>
 </section>
 
-<section class="card" id="archetypes">
-  <h2>4 · Four latent swing archetypes</h2>
-  <p>Unsupervised clustering on the Face-On pose features (<i>K</i>=4, silhouette = 0.54) reveals four interpretable styles:</p>
+<section class="card" id="clusters">
+  <h2>4 · Four clusters — but two track golfer identity</h2>
+  <p>K-means in the Face-On pose space (K = 4, silhouette = 0.54, well above the permuted-label null) recovers
+  four partitions. The per-golfer crosstab shows that two of them are effectively single-golfer pools.</p>
   <div class="archs">
     <div class="arch" style="background:#d96c6c">
       <span class="n">n=33</span>
-      <h4>A0 · Early Hip Release</h4>
+      <h4>A0</h4>
       <p>Avg 156 yd</p>
-      <p>Over-rotates hips early in the backswing, loses the coil. Classic "spin-out" fault.</p>
+      <p style="font-size:11.5px;opacity:0.95">82% Golfer 8 · entropy 0.87 bits</p>
     </div>
     <div class="arch" style="background:#3a7ca5">
       <span class="n">n=512</span>
-      <h4>A1 · Balanced Coil</h4>
+      <h4>A1</h4>
       <p>Avg 191 yd</p>
-      <p>Mainstream long-hitter style: wide lead arm, quiet hips in backswing, targetward shift in downswing.</p>
+      <p style="font-size:11.5px;opacity:0.95">Spans all 8 golfers · entropy 2.54 bits</p>
     </div>
     <div class="arch" style="background:#eaa94c">
       <span class="n">n=32</span>
-      <h4>A2 · Aggressive Rotator</h4>
+      <h4>A2</h4>
       <p>Avg 183 yd</p>
-      <p>Fast hip rotation in early downswing without hanging back. Lowest direction error of any archetype.</p>
+      <p style="font-size:11.5px;opacity:0.95">56% Golfer 5 · entropy 1.42 bits</p>
     </div>
     <div class="arch" style="background:#7c9f3a">
       <span class="n">n=36</span>
-      <h4>A3 · Compact Swing</h4>
+      <h4>A3</h4>
       <p>Avg 167 yd</p>
-      <p>Short arc, low shoulder position, collapsed lead arm. Highest side-spin — accuracy cost.</p>
+      <p style="font-size:11.5px;opacity:0.95">89% Golfer 4 · entropy 0.50 bits</p>
     </div>
   </div>
   <figure>
-    <img src="assets/fig3_archetypes.png" alt="Archetype figure">
-    <figcaption>Figure 3. (a) UMAP embedding of the 68-dim Face-On pose space, coloured by K-means label. (b) Per-archetype performance profile (normalised).</figcaption>
+    <img src="assets/fig3_archetypes.png" alt="Archetype figure: UMAP, per-golfer crosstab, silhouette sweep">
+    <figcaption>Figure 3. (a) UMAP embedding, coloured by K=4 K-means. (b) Per-golfer × cluster row-fraction heatmap showing A0 is mostly Golfer 8 and A3 is mostly Golfer 4. (c) Silhouette vs K with a permuted-label null baseline.</figcaption>
   </figure>
+  <p><b>LOGO stability:</b> mean Adjusted Rand Index between the full-sample clustering and a refit
+  excluding one golfer is 0.956, but drops to 0.82–0.83 when Golfer 4 or Golfer 8 is held out. We
+  therefore refer to the clusters as A0–A3 only — a population-level &ldquo;aggressive rotator&rdquo;
+  archetype cannot be claimed from a cluster that is effectively one golfer.</p>
 </section>
 
 <section class="card" id="rules">
-  <h2>5 · A coaching rule tree (depth 3)</h2>
-  <p>Can we compress the above into something a coach can use? A depth-3 regression tree on Face-On pose features achieves a cross-validated R² of 0.34 — enough signal to be useful as a screening tool:</p>
+  <h2>5 · A within-sample rule tree, reported honestly</h2>
+  <p>A depth-3 regression tree on the Face-On × driver subset compresses the strongest within-corpus
+  associations into a readable form. Random CV R² = 0.34; GroupKFold(8) R² = <b style="color:var(--warn)">−3.36</b>.
+  Depth sensitivity analysis shows the pattern is depth-insensitive; the GroupKFold number gets <i>worse</i>
+  at deeper settings, indicating that added leaves chase golfer-specific structure.</p>
+
   <div class="rulebox">
     <b>IF</b> <code>2-LEFT-ARM-ANGLE &gt; 160.9°</code> <span class="note">// lead arm ~straight at mid-backswing</span><br>
     &nbsp;<b>AND</b> <code>1-HIP-SHIFTED &gt; -0.52</code> <span class="note">// hips not stuck behind at takeaway</span><br>
     &nbsp;<b>AND</b> <code>4-HIP-SHIFTED &gt; -0.15</code> <span class="note">// hips move target-ward early in downswing</span><br>
-    <b>THEN</b> <span class="out">predicted drive ≈ 201 yd</span> (vs 145 yd for the worst-case leaf)
+    <b>THEN</b> <span class="out">leaf mean ≈ 227 yd</span> (95% bootstrap CI [223, 232], n = 37)
   </div>
+  <p style="font-size:13.5px;color:var(--muted)">Because GroupKFold R² is negative, this rule path is a <b>within-sample description</b>, not a population prescription. It describes what covaries with long drives <em>in these eight golfers</em>.</p>
+
+  <figure>
+    <img src="assets/fig8_tree_leaves.png" alt="Tree leaves: mean and 95% bootstrap CI">
+    <figcaption>Figure 4. Per-leaf mean Distance with 95% bootstrap CIs. Small leaves carry wide CIs; the 145→227 yd spread is real within-sample but narrower than the point estimates alone suggest.</figcaption>
+  </figure>
   <figure>
     <img src="assets/fig4_tree.png" alt="Decision tree">
-    <figcaption>Figure 4. Full depth-3 regression tree. Darker leaves = longer drives.</figcaption>
+    <figcaption>Figure 5. Full depth-3 regression tree. Random CV R² = 0.34, GroupKFold(8) R² = −3.36.</figcaption>
+  </figure>
+</section>
+
+<section class="card" id="robust">
+  <h2>6 · Robustness of the power/accuracy gap</h2>
+  <p>Is the gap between distance and accuracy R² an artefact of the |·| transform or the Random Forest choice? No. Across three transforms (signed, |y|, √|y|) and two models (Random Forest, HistGradientBoosting), random-CV R² is positive and GroupKFold R² is negative in every cell.</p>
+  <figure>
+    <img src="assets/fig7_robustness.png" alt="Accuracy ceiling robustness">
+    <figcaption>Figure 6. Accuracy-ceiling robustness on Face-On driver swings. Signed DirectionAngle gives the highest random R² (0.39, RF) — but still collapses under golfer-aware CV.</figcaption>
   </figure>
 </section>
 
 <section class="card">
-  <h2>6 · Distributional shifts for the top-6 features</h2>
+  <h2>7 · Distributional shifts, top-6 features</h2>
   <figure>
-    <img src="assets/fig6_distributions.png" alt="Distributions">
-    <figcaption>Figure 6. For each of the six most-discriminating pose features, the top-20% and bottom-20% driver-distance groups separate cleanly — not just in mean, but in modal shape.</figcaption>
+    <img src="assets/fig6_distributions.png" alt="Distributions of top-6 features">
+    <figcaption>Figure 7. For the six most-discriminating pose features, the top-20% and bottom-20% driver-distance groups separate in modes as well as means. <i>d</i> shown is extreme-groups and overstates the continuous effect.</figcaption>
   </figure>
 </section>
 
 <section class="card" id="reproduce">
-  <h2>7 · Reproducing the results</h2>
+  <h2>8 · Reproducing the results</h2>
   <pre>git clone https://github.com/edwardxiong2027/caddieset-rules.git
 cd caddieset-rules
 python -m venv .venv && source .venv/bin/activate
@@ -285,19 +320,19 @@ pip install -r requirements.txt
 
 # Place CaddieSet.csv in data/ (obtain from the original authors)
 python src/01_explore.py
-python src/02_effect_sizes.py
-python src/03_archetypes.py
-python src/04_rules.py
-python src/05_make_figures.py</pre>
-  <p>Seeds are fixed throughout. Every figure on this page is regenerated exactly by <code>src/05_make_figures.py</code>.</p>
+python src/02_effect_sizes.py          # extreme-groups d + Pearson r + BH-FDR + GroupKFold R^2
+python src/03_archetypes.py            # K sweep, per-golfer crosstab, LOGO ARI
+python src/04_rules.py                 # tree + depth sweep + per-leaf bootstrap CI
+python src/06_accuracy_robust.py       # transform x model x CV robustness grid
+python src/05_make_figures.py          # all 8 paper figures</pre>
+  <p>Seeds are fixed throughout. Every figure on this page and in the paper is regenerated exactly by the scripts above.</p>
 </section>
 
 <section class="card" id="cite">
-  <h2>8 · Citing this work</h2>
-  <p>If you use these findings or the code in this repo, please cite both this project and the original CaddieSet dataset paper:</p>
+  <h2>9 · Citing this work</h2>
   <pre>@misc{caddiesetrules2026,
-  title  = {From Prediction to Prescription: Mining Interpretable Biomechanical
-            Rules and Latent Swing Archetypes from Multi-Phase Pose Data},
+  title  = {Phase-Localised Pose Correlates of Driver Distance in a Small-N
+            Golf Corpus: A Secondary, Associative Analysis of CaddieSet},
   author = {Xiong, Edward},
   year   = {2026},
   url    = {https://github.com/edwardxiong2027/caddieset-rules}
@@ -311,17 +346,19 @@ python src/05_make_figures.py</pre>
   journal = {arXiv preprint arXiv:2508.20491},
   year    = {2025}
 }</pre>
-  <p>The full reference list (19 works spanning pose estimation, interpretable ML, and golf biomechanics) is in
+  <p>The extended reference list (including Benjamini–Hochberg, Fitzsimons, Bartlett, Button, Letham, Lakkaraju,
+  Angelino, Friedman & Popescu, Ustun & Rudin) is in
   <a href="https://github.com/edwardxiong2027/caddieset-rules/blob/main/paper/references.bib">references.bib</a>.</p>
 </section>
 
 <section class="card">
-  <h2>9 · Limitations</h2>
+  <h2>10 · Limitations</h2>
   <ul>
-    <li><b>Small golfer pool (n=8).</b> Some archetypes are golfer-specific. Replication on a larger corpus is essential.</li>
-    <li><b>Observational data.</b> All associations are correlational. "Straight lead arm → longer drive" may be a cause, or a marker of golfers who already have the coil to support it.</li>
-    <li><b>No club-face / swing-path data.</b> The accuracy-ceiling gap is bounded by features the dataset does not include.</li>
-    <li><b>Feature-name inference.</b> Directional descriptors (e.g., <code>HIP-SHIFTED</code>) are interpreted in their natural biomechanical reading; formal units are not documented in the public CSV.</li>
+    <li><b>N = 8 golfers.</b> This is the binding constraint. It is why the ceiling collapses under GroupKFold, why two of four clusters are single-golfer, and why this paper is descriptive, not prescriptive.</li>
+    <li><b>Observational data.</b> All associations are correlational. A straighter lead arm could be a cause of distance, or a marker of a golfer whose coil already supports distance.</li>
+    <li><b>Inferred feature semantics.</b> Signs follow the most natural biomechanical reading of public column names; formal units are not documented. Magnitudes do not depend on this choice.</li>
+    <li><b>Extreme-groups <i>d</i> is inflated.</b> We also report continuous Pearson <i>r</i>, the Fitzsimons back-transform, and Spearman <i>ρ</i> — the continuous effects are ~30–40% of the <i>d</i> magnitudes.</li>
+    <li><b>No club-face or path data.</b> The accuracy ceiling is capped by features the dataset does not include.</li>
   </ul>
 </section>
 
